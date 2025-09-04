@@ -7,25 +7,59 @@
 #include <unistd.h>
 
 void generateResponse(char *requestBuffer, char *response) {
+  // Copy requestBuffer because strtok modifies it
+  char requestCopy[1024];
+  strncpy(requestCopy, requestBuffer, sizeof(requestCopy) - 1);
+  requestCopy[sizeof(requestCopy) - 1] = '\0';
+
   // Get the method
-  char *HTTPMethod = strtok(requestBuffer, " ");
+  char *HTTPMethod = strtok(requestCopy, " ");
+  // Get the path
+  char *HTTPPath = strtok(NULL, " ");
+
+  // Handle NULL path or root path "/"
+  if (!HTTPPath || strcmp(HTTPPath, "/") == 0) {
+    HTTPPath = "index.html";
+  } else if (HTTPPath[0] == '/') {
+    HTTPPath++;  // remove leading '/'
+  }
+
   if (HTTPMethod && strcmp(HTTPMethod, "GET") == 0) {
-    // Example response for GET request
-    sprintf(response,
-            "HTTP/1.1 200 OK\r\n"
-            "Content-Type: text/plain\r\n"
-            "\r\n"
-            "Hello, world!");
+    FILE *file = fopen(HTTPPath, "r");
+    if (!file) {
+      sprintf(response,
+              "HTTP/1.1 404 Not Found\r\n"
+              "Content-Type: text/plain\r\n"
+              "\r\n"
+              "File not found");
+      return;
+    }
+
+    strcpy(response,
+           "HTTP/1.1 200 OK\r\n"
+           "Content-Type: text/plain\r\n"
+           "\r\n");
+
+    char lineBuffer[1024];
+    size_t responseLen = strlen(response);
+    while (fgets(lineBuffer, sizeof(lineBuffer), file) != NULL) {
+      size_t lineLen = strlen(lineBuffer);
+      if (responseLen + lineLen < 1024) {
+        strcat(response, lineBuffer);
+        responseLen += lineLen;
+      } else {
+        break;
+      }
+    }
+
+    fclose(file);
   } else {
-    // Handle unsupported methods
     sprintf(response,
             "HTTP/1.1 400 Bad Request\r\n"
             "Content-Type: text/plain\r\n"
             "\r\n"
             "Unsupported Method");
   }
-
-  return;
 }
 
 void serverLoop(int serverSocketFD) {

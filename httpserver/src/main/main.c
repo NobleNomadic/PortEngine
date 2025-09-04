@@ -35,10 +35,37 @@ void generateResponse(char *requestBuffer, char *response) {
       return;
     }
 
-    strcpy(response,
-           "HTTP/1.1 200 OK\r\n"
-           "Content-Type: text/plain\r\n"
-           "\r\n");
+    // pick content type based on extension
+    const char *ext = strrchr(HTTPPath, '.');
+    const char *contentType = "application/octet-stream";
+    if (ext) {
+      if (strcmp(ext, ".html") == 0 || strcmp(ext, ".htm") == 0) {
+        contentType = "text/html";
+      } else if (strcmp(ext, ".css") == 0) {
+        contentType = "text/css";
+      } else if (strcmp(ext, ".js") == 0) {
+        contentType = "application/javascript";
+      } else if (strcmp(ext, ".png") == 0) {
+        contentType = "image/png";
+      } else if (strcmp(ext, ".jpg") == 0 || strcmp(ext, ".jpeg") == 0) {
+        contentType = "image/jpeg";
+      } else if (strcmp(ext, ".gif") == 0) {
+        contentType = "image/gif";
+      } else if (strcmp(ext, ".ico") == 0) {
+        contentType = "image/x-icon";
+      } else if (strcmp(ext, ".txt") == 0) {
+        contentType = "text/plain";
+      } else if (strcmp(ext, ".json") == 0) {
+        contentType = "text/json";
+      }
+    }
+
+    // Create the response with the file content
+    sprintf(response,
+            "HTTP/1.1 200 OK\r\n"
+            "Content-Type: %s\r\n"
+            "\r\n",
+            contentType);
 
     char lineBuffer[1024];
     size_t responseLen = strlen(response);
@@ -60,6 +87,8 @@ void generateResponse(char *requestBuffer, char *response) {
             "\r\n"
             "Unsupported Method");
   }
+
+  printf("[*] Sending response:\n%s", response);
 }
 
 void serverLoop(int serverSocketFD) {
@@ -114,3 +143,4 @@ int main(int argc, char **argv) {
 
   return 0;
 }
+
